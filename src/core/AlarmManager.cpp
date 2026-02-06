@@ -4,6 +4,8 @@
 #include "../models/AlarmStorage.cpp"
 #include <chrono>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 AlarmManager::AlarmManager() 
     : audio_player_(std::make_unique<AudioPlayer>()) {
@@ -132,15 +134,39 @@ std::string AlarmManager::getCurrentRingingAlarmLabel() {
     return "Alarma";
 }
 
+// 🔧 FIX: Verificar cada 5 segundos y agregar logs de depuración
 void AlarmManager::checkAlarmsLoop() {
+    int last_minute = -1;
+    
     while (running_) {
         auto now = TimeUtils::getCurrentTime();
+        
+        // 🔍 LOG DE DEPURACIÓN: Mostrar hora actual cada minuto
+        if (now.minute != last_minute) {
+            std::ostringstream oss;
+            oss << "⏰ Hora actual del servidor: " 
+                << std::setfill('0') << std::setw(2) << now.hour << ":"
+                << std::setfill('0') << std::setw(2) << now.minute;
+            Logger::info(oss.str());
+            last_minute = now.minute;
+        }
         
         {
             std::lock_guard<std::mutex> lock(alarms_mutex_);
             
             for (auto& alarm : alarms_) {
                 if (!alarm.enabled) continue;
+                
+                // 🔍 LOG: Verificar cada alarma activa
+                if (now.minute != last_minute && alarms_.size() > 0) {
+                    std::ostringstream debug;
+                    debug << "  📌 Alarma " << alarm.id << ": "
+                          << std::setfill('0') << std::setw(2) << alarm.hour << ":"
+                          << std::setfill('0') << std::setw(2) << alarm.minute
+                          << " (enabled=" << alarm.enabled 
+                          << ", triggered_today=" << alarm.triggered_today << ")";
+                    Logger::info(debug.str());
+                }
                 
                 if (now.hour == alarm.hour && now.minute == alarm.minute && 
                     !alarm.triggered_today) {
@@ -150,13 +176,15 @@ void AlarmManager::checkAlarmsLoop() {
                 }
                 
                 // Reset diario a medianoche
-                if (now.hour == 0 && now.minute == 0) {
+                if (now.hour == 0 && now.minute == 0 && alarm.triggered_today) {
                     alarm.triggered_today = false;
+                    Logger::info("Reset diario para alarma: " + alarm.id);
                 }
             }
         }
         
-        std::this_thread::sleep_for(std::chrono::seconds(15));
+        // 🔧 FIX: Verificar cada 5 segundos en lugar de 15
+        std::this_thread::sleep_for(std::chrono::seconds(5));
     }
 }
 

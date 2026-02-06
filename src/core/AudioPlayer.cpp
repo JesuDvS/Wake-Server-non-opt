@@ -90,7 +90,7 @@ void AudioPlayer::playLoop() {
 
 bool AudioPlayer::playBeep() {
     // Método 1: Usar termux-media-player con archivo de sistema
-    int result = system("termux-media-player play /system/media/audio/alarms/Argon.ogg 2>/dev/null");
+    int result = system("termux-media-player play /data/data/com.termux/files/home/bellaciao.wav 2>/dev/null");
     if (result == 0) return true;
     
     // Método 2: Usar termux-tts (text-to-speech)
