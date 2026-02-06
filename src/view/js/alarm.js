@@ -1,5 +1,5 @@
 let alarms = [];
-let checkInterval = null;
+let statusCheckInterval = null;
 
 // Elementos DOM
 const currentTimeEl = document.getElementById('currentTime');
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCurrentTime();
     setInterval(updateCurrentTime, 1000);
     loadAlarms();
-    startAlarmChecker();
+    startStatusChecker(); // Cambio: solo verificar estado del servidor
     
     createBtn.addEventListener('click', createAlarm);
     stopAlarmBtn.addEventListener('click', stopAlarm);
@@ -78,6 +78,7 @@ function renderAlarms() {
                 <div class="alarm-time">${hours}:${minutes}</div>
                 <div class="alarm-label">
                     ${alarm.label}${alarm.vibrate ? ' 📳' : ''}
+                    ${alarm.ringing ? ' 🔔' : ''}
                 </div>
             </div>
             <div class="alarm-controls">
@@ -119,7 +120,7 @@ async function createAlarm() {
         const result = await response.json();
         
         if (result.success) {
-            showNotification('Alarma creada correctamente', 'success');
+            showNotification('✅ Alarma creada - Sonará en el servidor', 'success');
             loadAlarms();
             
             // Reset form
@@ -187,93 +188,68 @@ async function stopAlarm() {
         
         alarmRingingEl.classList.add('hidden');
         showNotification('Alarma detenida', 'success');
+        loadAlarms(); // Recargar para actualizar estado
     } catch (error) {
         console.error('Error:', error);
         showNotification('Error al detener alarma', 'error');
     }
 }
 
-// Verificar alarmas activas (frontend check)
-function startAlarmChecker() {
-    checkInterval = setInterval(() => {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        alarms.forEach(alarm => {
-            if (alarm.enabled && 
-                alarm.hour === currentHour && 
-                alarm.minute === currentMinute) {
-                
-                // Mostrar pantalla de alarma
-                ringLabelEl.textContent = alarm.label;
+// NUEVO: Verificar estado del servidor (si hay alarma sonando)
+function startStatusChecker() {
+    statusCheckInterval = setInterval(async () => {
+        try {
+            const response = await fetch('/api/alarms/status');
+            if (!response.ok) return;
+            
+            const status = await response.json();
+            
+            if (status.ringing && alarmRingingEl.classList.contains('hidden')) {
+                // Mostrar UI de alarma sonando
+                ringLabelEl.textContent = status.label || 'Alarma';
                 alarmRingingEl.classList.remove('hidden');
                 
-                // Vibración web si está soportada
-                if ('vibrate' in navigator && alarm.vibrate) {
-                    navigator.vibrate([500, 200, 500, 200, 500]);
-                }
+                // NO reproducir audio aquí - el servidor ya lo está haciendo
+                console.log('🔔 Alarma sonando en el servidor:', status.label);
                 
-                // Reproducir sonido
-                playAlarmSound();
+            } else if (!status.ringing && !alarmRingingEl.classList.contains('hidden')) {
+                // Ocultar UI si se detuvo
+                alarmRingingEl.classList.add('hidden');
             }
-        });
-    }, 5000); // Check cada 5 segundos
-}
-
-// Reproducir sonido de alarma
-function playAlarmSound() {
-    // Crear contexto de audio
-    try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Generar tono de alarma
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800; // Hz
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-        
-        // Repetir cada segundo
-        const intervalId = setInterval(() => {
-            if (!alarmRingingEl.classList.contains('hidden')) {
-                const osc = audioContext.createOscillator();
-                const gain = audioContext.createGain();
-                
-                osc.connect(gain);
-                gain.connect(audioContext.destination);
-                
-                osc.frequency.value = 800;
-                osc.type = 'sine';
-                gain.gain.setValueAtTime(0.3, audioContext.currentTime);
-                
-                osc.start(audioContext.currentTime);
-                osc.stop(audioContext.currentTime + 0.5);
-            } else {
-                clearInterval(intervalId);
-            }
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Error reproduciendo audio:', error);
-    }
+            
+        } catch (error) {
+            console.error('Error verificando estado:', error);
+        }
+    }, 2000); // Verificar cada 2 segundos
 }
 
 // Mostrar notificación
 function showNotification(message, type) {
-    // Simple console log - puedes implementar notificaciones visuales
     console.log(`[${type.toUpperCase()}] ${message}`);
+    
+    // Opcional: Agregar toast notification
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// Prevenir que el navegador se duerma
+// Prevenir que el navegador se duerma (mantener la UI activa)
 function keepAwake() {
     if ('wakeLock' in navigator) {
         navigator.wakeLock.request('screen').catch(err => {

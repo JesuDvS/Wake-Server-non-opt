@@ -24,6 +24,10 @@ public:
     bool toggleAlarm(const std::string& id);
     nlohmann::json getAllAlarms();
     void stopCurrentAlarm();
+    
+    // Nuevos métodos para que el cliente sepa si hay alarma sonando
+    bool isAlarmRinging() const;
+    std::string getCurrentRingingAlarmLabel();
 
 private:
     void checkAlarmsLoop();
@@ -38,6 +42,7 @@ private:
     
     std::unique_ptr<AudioPlayer> audio_player_;
     std::atomic<bool> alarm_ringing_{false};
+    std::string current_ringing_alarm_;
 };
 
 #endif

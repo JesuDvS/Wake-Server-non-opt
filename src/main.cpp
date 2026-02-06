@@ -51,6 +51,14 @@ int main() {
         res.set_content(response.dump(), "application/json");
     });
 
+    // API: Obtener estado de alarma sonando
+    svr.Get("/api/alarms/status", [&alarmManager](const httplib::Request&, httplib::Response& res) {
+        json response;
+        response["ringing"] = alarmManager.isAlarmRinging();
+        response["label"] = alarmManager.getCurrentRingingAlarmLabel();
+        res.set_content(response.dump(), "application/json");
+    });
+
     // API: Crear alarma
     svr.Post("/api/alarms", [&alarmManager](const httplib::Request& req, httplib::Response& res) {
         try {

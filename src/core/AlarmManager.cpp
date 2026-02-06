@@ -95,6 +95,7 @@ nlohmann::json AlarmManager::getAllAlarms() {
         j["enabled"] = alarm.enabled;
         j["vibrate"] = alarm.vibrate;
         j["sound_file"] = alarm.sound_file;
+        j["ringing"] = (current_ringing_alarm_ == alarm.id);
         result.push_back(j);
     }
     
@@ -105,8 +106,30 @@ void AlarmManager::stopCurrentAlarm() {
     if (alarm_ringing_) {
         audio_player_->stop();
         alarm_ringing_ = false;
+        current_ringing_alarm_.clear();
         Logger::info("Alarma detenida por el usuario");
     }
+}
+
+bool AlarmManager::isAlarmRinging() const {
+    return alarm_ringing_;
+}
+
+std::string AlarmManager::getCurrentRingingAlarmLabel() {
+    std::lock_guard<std::mutex> lock(alarms_mutex_);
+    
+    if (!alarm_ringing_ || current_ringing_alarm_.empty()) {
+        return "";
+    }
+    
+    auto it = std::find_if(alarms_.begin(), alarms_.end(),
+                          [this](const Alarm& a) { return a.id == current_ringing_alarm_; });
+    
+    if (it != alarms_.end()) {
+        return it->label;
+    }
+    
+    return "Alarma";
 }
 
 void AlarmManager::checkAlarmsLoop() {
@@ -138,15 +161,19 @@ void AlarmManager::checkAlarmsLoop() {
 }
 
 void AlarmManager::triggerAlarm(const Alarm& alarm) {
-    Logger::info("🔔 ALARMA ACTIVADA: " + alarm.label);
+    Logger::info("🔔 ALARMA ACTIVADA EN SERVIDOR: " + alarm.label);
     
     alarm_ringing_ = true;
+    current_ringing_alarm_ = alarm.id;
+    
+    // Reproducir sonido EN EL SERVIDOR (Termux)
     audio_player_->play(alarm.sound_file, alarm.vibrate);
     
     // Auto-detener después de 5 minutos
     std::thread([this]() {
         std::this_thread::sleep_for(std::chrono::minutes(5));
         if (alarm_ringing_) {
+            Logger::warning("Alarma auto-detenida después de 5 minutos");
             stopCurrentAlarm();
         }
     }).detach();
