@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏰ Despertador Termux</title>
+    <link rel="stylesheet" href="/css/alarm.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⏰ Despertador</h1>
+            <div id="currentTime">--:--</div>
+        </header>
+
+        <div class="alarm-creator">
+            <h2>Nueva Alarma</h2>
+            <div class="time-picker">
+                <input type="number" id="hourInput" min="0" max="23" placeholder="HH" value="07">
+                <span>:</span>
+                <input type="number" id="minuteInput" min="0" max="59" placeholder="MM" value="00">
+            </div>
+            <input type="text" id="labelInput" placeholder="Etiqueta (ej: Despertar)" value="Despertar">
+            <label class="checkbox-label">
+                <input type="checkbox" id="vibrateCheck" checked>
+                Vibrar
+            </label>
+            <button id="createBtn" class="btn-primary">Crear Alarma</button>
+        </div>
+
+        <div class="alarms-list">
+            <h2>Mis Alarmas</h2>
+            <div id="alarmsList">
+                <p class="empty-state">No hay alarmas configuradas</p>
+            </div>
+        </div>
+
+        <div id="alarmRinging" class="alarm-ringing hidden">
+            <div class="alarm-ring-content">
+                <h2>🔔 ¡ALARMA!</h2>
+                <p id="ringLabel">Despertar</p>
+                <button id="stopAlarmBtn" class="btn-danger">Detener Alarma</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/alarm.js"></script>
+</body>
+</html>

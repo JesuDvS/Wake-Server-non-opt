@@ -1,0 +1,25 @@
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+
+set(CMAKE_C_COMPILER   aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+
+# 🔑 RUTAS ARM REALES EN UBUNTU
+set(CMAKE_FIND_ROOT_PATH
+    /usr/aarch64-linux-gnu
+    /usr/lib/aarch64-linux-gnu
+)
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+
+# ✅ ESPECIFICAR EXPLÍCITAMENTE LAS RUTAS DE CURL PARA ARM64
+set(CURL_LIBRARY /usr/lib/aarch64-linux-gnu/libcurl.so)
+set(CURL_INCLUDE_DIR /usr/include/aarch64-linux-gnu)
+
+# Indicar a CMake que use estas rutas
+set(CURL_FOUND TRUE)
+set(CURL_LIBRARIES ${CURL_LIBRARY})
+set(CURL_INCLUDE_DIRS ${CURL_INCLUDE_DIR})
